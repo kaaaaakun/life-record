@@ -1,0 +1,23 @@
+name: Create daily issue
+on:
+  schedule:
+    - cron: '0 22 * * *' # JST 7:00
+  workflow_dispatch:
+jobs:
+  createReminderIssue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up date
+        id: date
+        run: echo "DATE=$(date -d '9 hours' +'%Y-%m-%d')" >> $GITHUB_ENV
+        env:
+          TZ: 'Asia/Tokyo'
+      - name: Create issue by template
+        uses: JasonEtco/create-an-issue@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          filename: .github/journal.md
+          assignees: ${{ github.actor }} # ここで動的にアサインする
+

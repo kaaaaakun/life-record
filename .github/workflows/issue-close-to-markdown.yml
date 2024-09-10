@@ -1,0 +1,63 @@
+name: Issue Close to Markdown
+
+on:
+  issues:
+    types: [closed]
+
+jobs:
+  convert_issue_to_md:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v3
+
+      - name: Get Issue Details
+        id: issue
+        run: |
+          ISSUE_NUMBER="${{ github.event.issue.number }}"
+          ISSUE_TITLE="${{ github.event.issue.title }}"
+          ISSUE_BODY="${{ github.event.issue.body }}"
+          ISSUE_DATE_UTC="${{ github.event.issue.closed_at }}"
+          # 日本時間（JST）に変換
+          ISSUE_DATE=$(date -d "$ISSUE_DATE_UTC" '+%Y-%m-%dT%H:%M:%S%z' | TZ='Asia/Tokyo' date +'%Y-%m-%dT%H:%M:%S%z')
+
+          # 環境変数に保存する内容は簡潔なものにする
+          echo "ISSUE_NUMBER=${ISSUE_NUMBER}" >> $GITHUB_ENV
+          echo "ISSUE_TITLE=${ISSUE_TITLE}" >> $GITHUB_ENV
+          echo "ISSUE_DATE=${ISSUE_DATE}" >> $GITHUB_ENV
+
+          # ISSUE_BODY はファイルに保存
+          echo "${ISSUE_BODY}" > issue_body.txt
+
+      - name: Get Issue Comments
+        id: issue_comments
+        run: |
+          COMMENTS_URL="${{ github.event.issue.comments_url }}"
+          curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "$COMMENTS_URL" > issue_comments.json
+
+      - name: Create markdown file
+        run: |
+          mkdir -p issues/
+          FILE_NAME="issues/${{ env.ISSUE_TITLE }}_${{ env.ISSUE_DATE }}.md"
+          echo "${{ env.ISSUE_TITLE }}" > "$FILE_NAME"
+          echo "-------------------------" >> "$FILE_NAME"
+          echo "" >> "$FILE_NAME"
+
+          # ISSUE_BODY をファイルから読み込む
+          cat issue_body.txt >> "$FILE_NAME"
+          echo "" >> "$FILE_NAME"
+
+          # コメントを追加
+          cat issue_comments.json | jq -r '.[] | "@\(.user.login)\n\n\(.body)\n\n---"' >> "$FILE_NAME"
+          echo "**Closed on**: ${{ env.ISSUE_DATE }}" >> "$FILE_NAME"
+
+      - name: Commit and Push
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add issues/
+          git commit -m "${{ env.ISSUE_TITLE }} #${{ env.ISSUE_NUMBER }}"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
