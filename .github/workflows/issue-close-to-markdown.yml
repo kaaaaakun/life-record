@@ -18,12 +18,16 @@ jobs:
           ISSUE_TITLE="${{ github.event.issue.title }}"
           ISSUE_BODY="${{ github.event.issue.body }}"
           ISSUE_DATE_UTC="${{ github.event.issue.closed_at }}"
+          
           # 日本時間（JST）に変換
           ISSUE_DATE=$(date -d "$ISSUE_DATE_UTC" '+%Y-%m-%dT%H:%M:%S%z' | TZ='Asia/Tokyo' date +'%Y-%m-%dT%H:%M:%S%z')
 
-          # 環境変数に保存する内容は簡潔なものにする
+          # ファイル名用にISSUE_TITLEを整形（スペースや特殊文字をアンダースコアに置換）
+          SAFE_ISSUE_TITLE=$(echo "${ISSUE_TITLE}" | tr -s ' ' '_' | tr -dc '[:alnum:]_')
+
+          # 環境変数に保存
           echo "ISSUE_NUMBER=${ISSUE_NUMBER}" >> $GITHUB_ENV
-          echo "ISSUE_TITLE=${ISSUE_TITLE}" >> $GITHUB_ENV
+          echo "ISSUE_TITLE=${SAFE_ISSUE_TITLE}" >> $GITHUB_ENV
           echo "ISSUE_DATE=${ISSUE_DATE}" >> $GITHUB_ENV
 
           # ISSUE_BODY はファイルに保存
@@ -39,7 +43,9 @@ jobs:
         run: |
           mkdir -p issues/
           FILE_NAME="issues/${{ env.ISSUE_TITLE }}_${{ env.ISSUE_DATE }}.md"
-          echo "${{ env.ISSUE_TITLE }}" > "$FILE_NAME"
+          
+          # Markdown ファイルにタイトルと本文を書き込む
+          echo "# ${{ env.ISSUE_TITLE }} #${{ env.ISSUE_NUMBER }}" > "$FILE_NAME"
           echo "-------------------------" >> "$FILE_NAME"
           echo "" >> "$FILE_NAME"
 
@@ -47,8 +53,10 @@ jobs:
           cat issue_body.txt >> "$FILE_NAME"
           echo "" >> "$FILE_NAME"
 
-          # コメントを追加
+          # コメントをMarkdownに追加
           cat issue_comments.json | jq -r '.[] | "@\(.user.login)\n\n\(.body)\n\n---"' >> "$FILE_NAME"
+          
+          # クローズ日時を追加
           echo "**Closed on**: ${{ env.ISSUE_DATE }}" >> "$FILE_NAME"
 
       - name: Commit and Push
