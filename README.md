@@ -23,7 +23,7 @@
 
 1. このリポジトリをGitHub上でフォークします。
 2. フォークしたリポジトリを自分のローカルにクローンする必要はありません。
-3. 許可してください。
+3. Settings > Actions > General の中で、GITHUB_TOKENの権限が「Read and write」に設定してください。<img width="809" alt="スクリーンショット 2024-09-09 18 41 15" src="https://github.com/user-attachments/assets/07dcd2ca-571e-40ae-944c-7406db26dada">
 4. リポジトリにある`.github/workflows`と`ISSUE_TEMPLATE`を必要に応じてカスタマイズします（後述）。
 5. GitHub上で新しいIssueを作成し、日々のタスクや学びを記録します。
 6. Issueをクローズすると、GitHub Actionsが自動でMarkdownファイルを生成し、`issues/`フォルダに保存されます。
